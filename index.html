@@ -219,14 +219,27 @@
   .modal-actions { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
  
   @media (max-width: 800px) {
-    #appShell.ready { flex-direction: column; }
-    .sidebar { width: 100%; flex-direction: row; overflow-x: auto; padding: 10px; }
-    .sidebar .brand, .sidebar-footer { display: none; }
+    body { overflow-x: hidden; }
+    #appShell.ready { flex-direction: column; height: auto; min-height: 100vh; }
+    .sidebar { width: 100%; flex-direction: row; align-items: center; overflow-x: auto; padding: 10px; }
+    .sidebar .brand { display: none; }
+    .sidebar-footer {
+      margin-top: 0; padding: 0 0 0 10px; border: none;
+      display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+    }
+    .sidebar-footer .name, .sidebar-footer .role { display: none; }
+    .sidebar-footer button { width: auto; white-space: nowrap; padding: 8px 12px; }
     .nav-item { border-left: none; border-bottom: 3px solid transparent; white-space: nowrap; padding: 10px 14px; }
     .nav-item.active { border-left-color: transparent; border-bottom-color: var(--amber); }
-    .main { padding: 18px; }
+    .main { padding: 14px; max-height: none; overflow-y: visible; }
     .grid-3 { grid-template-columns: 1fr; }
     .form-row { grid-template-columns: 1fr; }
+    .card { padding: 14px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    table { min-width: 560px; }
+    .toolbar { flex-direction: column; align-items: stretch; }
+    .toolbar .btn { width: 100%; }
+    .modal { padding: 18px; max-width: 92vw; }
+    h1 { font-size: 20px; }
   }
 </style>
 </head>
