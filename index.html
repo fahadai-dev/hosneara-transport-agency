@@ -151,6 +151,7 @@
   .badge.driver { background: var(--amber-bg); color: #8a5a10; }
   .badge.office { background: var(--success-bg); color: var(--success); }
   .badge.due { background: var(--danger-bg); color: var(--danger); }
+  .badge.partial { background: var(--amber-bg); color: #8a5a10; }
   .badge.paid { background: var(--success-bg); color: var(--success); }
   .badge.warn { background: var(--danger-bg); color: var(--danger); }
   .badge.soon { background: var(--amber-bg); color: #8a5a10; }
@@ -464,8 +465,8 @@
       </div>
       <div class="card">
         <table>
-          <thead><tr><th>গাড়ি</th><th>গ্রাহক</th><th>রুট</th><th>আয়</th><th>পেমেন্ট</th><th>খরচ</th><th>কমিশন</th><th>টাকা</th><th>সেটেল</th></tr></thead>
-          <tbody id="dailyTripsBody"><tr><td colspan="9" class="empty">লোড হচ্ছে...</td></tr></tbody>
+          <thead><tr><th>গাড়ি</th><th>গ্রাহক</th><th>রুট</th><th>আয়</th><th>পেমেন্ট</th><th>খরচ</th><th>কমিশন</th><th>টাকা</th><th>সেটেল</th><th></th></tr></thead>
+          <tbody id="dailyTripsBody"><tr><td colspan="10" class="empty">লোড হচ্ছে...</td></tr></tbody>
         </table>
       </div>
     </section>
@@ -491,8 +492,8 @@
       <p style="color:var(--muted);margin-top:-12px">কাস্টডি = ড্রাইভার অফিসের কাছে যা ফেরত দেবে। কমিশন = অফিস ড্রাইভারকে যা দেবে। দুটো আলাদা হিসাব।</p>
       <div class="card">
         <table>
-          <thead><tr><th>ড্রাইভার</th><th>গাড়ি</th><th>মোট ট্রিপ</th><th>বকেয়া কাস্টডি (ড্রাইভার দেবে)</th><th>বকেয়া কমিশন (অফিস দেবে)</th></tr></thead>
-          <tbody id="driversBody"><tr><td colspan="5" class="empty">লোড হচ্ছে...</td></tr></tbody>
+          <thead><tr><th>ড্রাইভার</th><th>গাড়ি</th><th>মোট ট্রিপ</th><th>বকেয়া কাস্টডি (ড্রাইভার দেবে)</th><th>মোট কমিশন</th><th>দেওয়া হয়েছে</th><th>বকেয়া কমিশন (অফিস দেবে)</th></tr></thead>
+          <tbody id="driversBody"><tr><td colspan="7" class="empty">লোড হচ্ছে...</td></tr></tbody>
         </table>
       </div>
     </section>
@@ -625,14 +626,18 @@
 <div class="modal-overlay" id="markPaidModalOverlay">
   <div class="modal">
     <h2>টাকা পেলাম</h2>
-    <p style="color:var(--muted);font-size:14px;margin-top:4px">টাকাটা এখন কার কাছে জমা হলো?</p>
+    <p style="color:var(--muted);font-size:14px;margin:4px 0 0" id="markPaidDueInfo">মোট বাকি: ৳০</p>
     <input type="hidden" id="markPaidTripId">
-    <div class="modal-actions" style="justify-content:stretch;gap:10px">
-      <button type="button" class="btn secondary" style="flex:1" onclick="confirmMarkPaid('office')">অফিসে জমা</button>
-      <button type="button" class="btn primary" style="flex:1" onclick="confirmMarkPaid('driver')">ড্রাইভারের কাছে</button>
-    </div>
+    <label>এখন কত টাকা পেলে? (পুরোটা না পেলে কম লিখো)</label>
+    <input type="number" id="markPaidAmount" min="0" step="0.01">
+    <label>টাকাটা কার কাছে জমা হলো?</label>
+    <select id="markPaidHolder">
+      <option value="office">অফিসে জমা</option>
+      <option value="driver">ড্রাইভারের কাছে</option>
+    </select>
     <div class="modal-actions">
       <button type="button" class="btn secondary" onclick="closeModal('markPaidModalOverlay')">বাতিল</button>
+      <button type="button" class="btn primary" onclick="confirmMarkPaid()">সেভ করো</button>
     </div>
   </div>
 </div>
@@ -687,6 +692,7 @@ let companiesCache = [];
  
 /* ---------------- UTILITIES ---------------- */
 function money(n) { return '৳' + Number(n || 0).toLocaleString('en-BD', { maximumFractionDigits: 2 }); }
+function paymentStatusLabel(status) { return status === 'paid' ? 'পরিশোধিত' : status === 'partial' ? 'আংশিক' : 'বাকি'; }
 function todayStr() { return new Date().toISOString().slice(0, 10); }
 function showToast(msg, isError) {
   const t = document.getElementById('toast');
@@ -806,40 +812,60 @@ function populateCompanySelect() {
     companiesCache.map((c) => `<option value="${c.id}">${c.name}</option>`).join('');
 }
  
-/* ---------------- DUE LIST (সব বাকি টাকা, সব তারিখ, সব উৎস) ---------------- */
+/* ---------------- DUE LIST (সব বাকি/আংশিক টাকা, সব তারিখ, সব উৎস) ---------------- */
 async function renderDueList() {
-  const { data: trips, error } = await supabaseClient.from('trips').select('*').eq('payment_status', 'due').order('trip_date', { ascending: false });
+  const { data: trips, error } = await supabaseClient.from('trips').select('*').in('payment_status', ['due', 'partial']).order('trip_date', { ascending: false });
   if (error) { showToast('বকেয়া তালিকা লোড করা যায়নি', true); return; }
  
   const body = document.getElementById('dueListBody');
   body.innerHTML = (trips || []).length ? trips.map((t) => {
     const v = vehiclesCache.find((x) => x.id === t.vehicle_id);
+    const due = Number(t.income) - Number(t.amount_paid);
     return `<tr>
       <td>${t.trip_date}</td>
       <td>${v ? vehicleLabel(v) : '—'}</td>
       <td>${t.customer_name || '—'}${t.customer_phone ? ' (' + t.customer_phone + ')' : ''}</td>
       <td>${t.from_location} → ${t.to_location}</td>
-      <td><strong>${money(t.income)}</strong></td>
+      <td><strong>${money(due)}</strong>${t.payment_status === 'partial' ? ` <span class="badge partial">আংশিক (${money(t.amount_paid)} পাওয়া গেছে)</span>` : ''}</td>
       <td><button class="btn small primary" onclick="openMarkPaidModal('${t.id}')">টাকা পেলাম</button></td>
     </tr>`;
   }).join('') : '<tr><td colspan="6" class="empty">কোনো বকেয়া নেই 🎉</td></tr>';
 }
  
-function openMarkPaidModal(tripId) {
+async function openMarkPaidModal(tripId) {
+  const { data: t, error } = await supabaseClient.from('trips').select('*').eq('id', tripId).single();
+  if (error || !t) { showToast('ট্রিপ পাওয়া যায়নি', true); return; }
+  const due = Number(t.income) - Number(t.amount_paid);
   document.getElementById('markPaidTripId').value = tripId;
+  document.getElementById('markPaidDueInfo').textContent = `মোট বাকি: ${money(due)}` + (Number(t.amount_paid) > 0 ? ` (আগে ${money(t.amount_paid)} পাওয়া গেছে)` : '');
+  document.getElementById('markPaidAmount').value = due;
+  document.getElementById('markPaidAmount').max = due;
+  document.getElementById('markPaidHolder').value = 'office';
   openModal('markPaidModalOverlay');
 }
-async function confirmMarkPaid(holder) {
+async function confirmMarkPaid() {
   const tripId = document.getElementById('markPaidTripId').value;
-  const { error } = await supabaseClient.from('trips').update({ payment_status: 'paid', money_holder: holder }).eq('id', tripId);
+  const holder = document.getElementById('markPaidHolder').value;
+  const enteredAmount = Number(document.getElementById('markPaidAmount').value) || 0;
+  if (enteredAmount <= 0) { showToast('একটা সঠিক পরিমাণ লেখো', true); return; }
+ 
+  const { data: t, error: fetchErr } = await supabaseClient.from('trips').select('income, amount_paid').eq('id', tripId).single();
+  if (fetchErr || !t) { showToast('ট্রিপ পাওয়া যায়নি', true); return; }
+ 
+  const newAmountPaid = Math.min(Number(t.amount_paid) + enteredAmount, Number(t.income));
+  const newStatus = newAmountPaid >= Number(t.income) ? 'paid' : 'partial';
+ 
+  const { error } = await supabaseClient.from('trips').update({
+    amount_paid: newAmountPaid, payment_status: newStatus, money_holder: holder,
+  }).eq('id', tripId);
   if (error) { showToast('আপডেট করা যায়নি', true); return; }
-  showToast('টাকা পাওয়া হিসেবে চিহ্নিত হলো');
+  showToast(newStatus === 'paid' ? 'পুরো টাকা পাওয়া হিসেবে চিহ্নিত হলো' : 'আংশিক টাকা যোগ হলো');
   closeModal('markPaidModalOverlay');
   // যে ভিউতে আছি সেটাই রিফ্রেশ করা
   const activeView = document.querySelector('.view.active').id.replace('view-', '');
   if (activeView === 'dueList') await renderDueList();
   else if (activeView === 'dailyAccounts') await renderDailyAccounts();
-  else if (activeView === 'companies') { /* কোম্পানি ডিটেইল খোলা থাকলে সেটাও রিফ্রেশ দরকার হতে পারে, তালিকা রিফ্রেশ যথেষ্ট */ await renderCompanies(); }
+  else if (activeView === 'companies') await renderCompanies();
   await renderDashboard();
 }
  
@@ -865,7 +891,7 @@ async function renderCompanies() {
     return `<tr>
       <td>${c.name}</td><td>${c.phone || '—'}</td><td>${s.count}</td><td>${money(s.income)}</td>
       <td>${s.due > 0 ? `<span class="badge due">${money(s.due)}</span>` : '—'}</td>
-      <td><button class="btn small secondary" onclick="showCompanyDetail('${c.id}')">বিস্তারিত</button></td>
+      <td><button class="btn small secondary" onclick="showCompanyDetail('${c.id}')">বিস্তারিত</button>${currentProfile.role === 'owner' ? ` <button class="btn small danger" onclick="deleteCompany('${c.id}')">ডিলিট</button>` : ''}</td>
     </tr>`;
   }).join('') : '<tr><td colspan="6" class="empty">এখনো কোনো কোম্পানি যোগ করা হয়নি</td></tr>';
 }
@@ -883,8 +909,8 @@ async function showCompanyDetail(companyId) {
       <td>${t.trip_date}</td><td>${v ? vehicleLabel(v) : '—'}</td><td>${t.from_location} → ${t.to_location}</td>
       <td>${money(t.income)}</td>
       <td>
-        <span class="badge ${t.payment_status}">${t.payment_status === 'paid' ? 'পরিশোধিত' : 'বাকি'}</span>
-        ${t.payment_status === 'due' ? `<button class="btn small primary" style="margin-left:6px" onclick="openMarkPaidModal('${t.id}')">টাকা পেলাম</button>` : ''}
+        <span class="badge ${t.payment_status}">${paymentStatusLabel(t.payment_status)}</span>
+        ${t.payment_status !== 'paid' ? `<button class="btn small primary" style="margin-left:6px" onclick="openMarkPaidModal('${t.id}')">টাকা পেলাম</button>` : ''}
       </td>
     </tr>`;
   }).join('') : '<tr><td colspan="5" class="empty">এই কোম্পানির কোনো ট্রিপ নেই</td></tr>';
@@ -892,6 +918,13 @@ async function showCompanyDetail(companyId) {
 }
 function closeCompanyDetail() {
   document.getElementById('companyDetailCard').style.display = 'none';
+}
+async function deleteCompany(id) {
+  if (!confirm('এই কোম্পানিটা ডিলিট করতে চাও? এদের নামে করা ট্রিপগুলো থেকে যাবে, শুধু কোম্পানির নাম-তথ্য মুছে যাবে।')) return;
+  const { error } = await supabaseClient.from('companies').delete().eq('id', id);
+  if (error) { showToast('ডিলিট করা যায়নি: ' + error.message, true); return; }
+  showToast('কোম্পানি ডিলিট হয়েছে');
+  await renderCompanies();
 }
  
 /* ---------------- DISPATCH BOARD ---------------- */
@@ -1008,6 +1041,7 @@ function setupForms() {
       customer_phone: document.getElementById('tripCustomerPhone').value.trim() || null,
       income: income,
       payment_status: document.getElementById('tripPaymentStatus').value,
+      amount_paid: document.getElementById('tripPaymentStatus').value === 'paid' ? income : 0,
       fuel_cost: Number(document.getElementById('tripFuel').value) || 0,
       khoraki_cost: Number(document.getElementById('tripKhoraki').value) || 0,
       other_cost: Number(document.getElementById('tripOther').value) || 0,
@@ -1207,19 +1241,28 @@ async function renderDailyAccounts() {
       <td>${t.from_location} → ${t.to_location}</td>
       <td>${money(t.income)}</td>
       <td>
-        <span class="badge ${t.payment_status}">${t.payment_status === 'paid' ? 'পরিশোধিত' : 'বাকি'}</span>
-        ${t.payment_status === 'due' ? `<button class="btn small primary" style="margin-left:6px" onclick="openMarkPaidModal('${t.id}')">টাকা পেলাম</button>` : ''}
+        <span class="badge ${t.payment_status}">${paymentStatusLabel(t.payment_status)}</span>
+        ${t.payment_status !== 'paid' ? `<button class="btn small primary" style="margin-left:6px" onclick="openMarkPaidModal('${t.id}')">টাকা পেলাম</button>` : ''}
       </td>
       <td>${money(Number(t.fuel_cost) + Number(t.khoraki_cost) + Number(t.other_cost))}</td>
       <td>${money(t.commission_cost)}</td>
       <td><span class="badge ${t.money_holder === 'pending' ? 'due' : t.money_holder}">${t.money_holder === 'driver' ? 'ড্রাইভারের কাছে' : t.money_holder === 'office' ? 'অফিসে' : 'এখনো পাইনি'}</span></td>
       <td>${t.settled ? '✅' : '—'}</td>
+      <td>${currentProfile.role === 'owner' ? `<button class="btn small danger" onclick="deleteTrip('${t.id}')">ডিলিট</button>` : ''}</td>
     </tr>`;
-  }).join('') : '<tr><td colspan="9" class="empty">এই দিনে কোনো ট্রিপ নেই</td></tr>';
+  }).join('') : '<tr><td colspan="10" class="empty">এই দিনে কোনো ট্রিপ নেই</td></tr>';
  
   document.getElementById('dailyIncome').textContent = money(income);
   document.getElementById('dailyCost').textContent = money(cost);
   document.getElementById('dailyProfit').textContent = money(income - cost);
+}
+async function deleteTrip(id) {
+  if (!confirm('এই ট্রিপটা ডিলিট করতে চাও? এই কাজ ফেরানো যাবে না।')) return;
+  const { error } = await supabaseClient.from('trips').delete().eq('id', id);
+  if (error) { showToast('ডিলিট করা যায়নি: ' + error.message, true); return; }
+  showToast('ট্রিপ ডিলিট হয়েছে');
+  await renderDailyAccounts();
+  await renderDashboard();
 }
  
 /* ---------------- VEHICLES LIST ---------------- */
@@ -1230,7 +1273,7 @@ async function renderVehiclesList() {
     <tr>
       <td>${v.plate}</td><td>${v.name || '—'}</td><td>${v.driver_name || '—'}</td><td>${v.driver_phone || '—'}</td>
       <td>${v.is_active ? '<span class="badge paid">সক্রিয়</span>' : '<span class="badge due">নিষ্ক্রিয়</span>'}</td>
-      <td><button class="btn small secondary" onclick="editVehicle('${v.id}')">এডিট</button></td>
+      <td><button class="btn small secondary" onclick="editVehicle('${v.id}')">এডিট</button>${currentProfile.role === 'owner' ? ` <button class="btn small danger" onclick="deleteVehicle('${v.id}')">ডিলিট</button>` : ''}</td>
     </tr>`).join('') : '<tr><td colspan="6" class="empty">এখনো কোনো গাড়ি যোগ করা হয়নি</td></tr>';
 }
 function editVehicle(id) {
@@ -1248,6 +1291,14 @@ function editVehicle(id) {
   document.getElementById('vehicleModalTitle').textContent = 'গাড়ি এডিট করো';
   openModal('vehicleModalOverlay');
 }
+async function deleteVehicle(id) {
+  if (!confirm('এই গাড়িটা ডিলিট করতে চাও? এর সব ট্রিপের হিস্ট্রিও মুছে যাবে। এই কাজ ফেরানো যাবে না।')) return;
+  const { error } = await supabaseClient.from('vehicles').delete().eq('id', id);
+  if (error) { showToast('ডিলিট করা যায়নি: ' + error.message, true); return; }
+  showToast('গাড়ি ডিলিট হয়েছে');
+  await loadVehicles();
+  await renderVehiclesList();
+}
  
 /* ---------------- DRIVERS ---------------- */
 async function renderDrivers() {
@@ -1256,34 +1307,53 @@ async function renderDrivers() {
  
   const byVehicle = {};
   (trips || []).forEach((t) => {
-    if (!byVehicle[t.vehicle_id]) byVehicle[t.vehicle_id] = { count: 0, custody: 0, commissionDue: 0 };
+    if (!byVehicle[t.vehicle_id]) byVehicle[t.vehicle_id] = { count: 0, custody: 0, commissionTotal: 0, commissionPaid: 0 };
     byVehicle[t.vehicle_id].count += 1;
     if (t.money_holder === 'driver' && !t.settled) {
       byVehicle[t.vehicle_id].custody += Number(t.income) - Number(t.fuel_cost) - Number(t.khoraki_cost) - Number(t.other_cost) - Number(t.commission_cost);
     }
-    if (!t.commission_paid && Number(t.commission_cost) > 0) {
-      byVehicle[t.vehicle_id].commissionDue += Number(t.commission_cost);
-    }
+    byVehicle[t.vehicle_id].commissionTotal += Number(t.commission_cost);
+    byVehicle[t.vehicle_id].commissionPaid += Number(t.commission_paid_amount);
   });
  
   const body = document.getElementById('driversBody');
   const rows = vehiclesCache.filter((v) => v.driver_name);
   body.innerHTML = rows.length ? rows.map((v) => {
-    const s = byVehicle[v.id] || { count: 0, custody: 0, commissionDue: 0 };
+    const s = byVehicle[v.id] || { count: 0, custody: 0, commissionTotal: 0, commissionPaid: 0 };
+    const commissionDue = s.commissionTotal - s.commissionPaid;
     return `<tr>
       <td>${v.driver_name}</td><td>${vehicleLabel(v)}</td><td>${s.count}</td>
       <td>${s.custody > 0 ? `${money(s.custody)} <button class="btn small primary" onclick="settleCustody('${v.id}')">বুঝে নিলাম</button>` : '—'}</td>
-      <td>${s.commissionDue > 0 ? `${money(s.commissionDue)} <button class="btn small secondary" onclick="settleCommission('${v.id}')">দিয়ে দিলাম</button>` : '—'}</td>
+      <td>${money(s.commissionTotal)}</td>
+      <td>${money(s.commissionPaid)}</td>
+      <td>${commissionDue > 0.5 ? `${money(commissionDue)} <button class="btn small secondary" onclick="settleCommission('${v.id}', ${commissionDue})">দিলাম</button>` : '—'}</td>
     </tr>`;
-  }).join('') : '<tr><td colspan="5" class="empty">কোনো গাড়িতে ড্রাইভারের নাম যোগ করা নেই</td></tr>';
+  }).join('') : '<tr><td colspan="7" class="empty">কোনো গাড়িতে ড্রাইভারের নাম যোগ করা নেই</td></tr>';
 }
  
-async function settleCommission(vehicleId) {
-  if (!confirm('এই গাড়ির ড্রাইভারের সব বকেয়া কমিশন দিয়ে দেওয়া হয়েছে হিসেবে চিহ্নিত হবে। নিশ্চিত?')) return;
-  const { error } = await supabaseClient.from('trips').update({ commission_paid: true })
-    .eq('vehicle_id', vehicleId).eq('commission_paid', false);
-  if (error) { showToast('আপডেট করা যায়নি', true); return; }
-  showToast('কমিশন দেওয়া হয়েছে হিসেবে চিহ্নিত হলো');
+async function settleCommission(vehicleId, dueAmount) {
+  const input = prompt(`মোট বকেয়া কমিশন ${money(dueAmount)}। এখন কত টাকা দিলে?`, dueAmount);
+  if (input === null) return;
+  let amount = Number(input);
+  if (!amount || amount <= 0) { showToast('একটা সঠিক পরিমাণ লেখো', true); return; }
+  if (amount > dueAmount) amount = dueAmount;
+ 
+  const { data: trips, error: fetchErr } = await supabaseClient.from('trips').select('id, commission_cost, commission_paid_amount')
+    .eq('vehicle_id', vehicleId).order('trip_date', { ascending: true });
+  if (fetchErr) { showToast('লোড করা যায়নি', true); return; }
+ 
+  // পুরনো ট্রিপ থেকে শুরু করে (FIFO) বকেয়া কমিশনের ঘরগুলো পূরণ করা
+  let remaining = amount;
+  for (const t of trips) {
+    if (remaining <= 0) break;
+    const due = Number(t.commission_cost) - Number(t.commission_paid_amount);
+    if (due <= 0) continue;
+    const pay = Math.min(due, remaining);
+    const { error } = await supabaseClient.from('trips').update({ commission_paid_amount: Number(t.commission_paid_amount) + pay }).eq('id', t.id);
+    if (error) { showToast('আপডেট করা যায়নি: ' + error.message, true); return; }
+    remaining -= pay;
+  }
+  showToast('কমিশন দেওয়া হিসেবে যোগ হলো');
   await renderDrivers();
 }
  

@@ -1,3 +1,4 @@
+
 -- ============================================================
 -- Route Ledger (রুট লেজার) — Supabase Schema
 -- Multi-tenant fleet management for transport businesses
@@ -66,8 +67,10 @@ create table if not exists trips (
   other_cost    numeric(12,2) not null default 0,
   commission_percent numeric(5,2) not null default 0,
   commission_cost numeric(12,2) not null default 0,
-  payment_status text not null default 'due' check (payment_status in ('due', 'paid')),
-  money_holder  text not null check (money_holder in ('office', 'driver')),
+  payment_status text not null default 'due' check (payment_status in ('due', 'partial', 'paid')),
+  amount_paid   numeric(12,2) not null default 0,
+  commission_paid_amount numeric(12,2) not null default 0,
+  money_holder  text not null default 'pending' check (money_holder in ('office', 'driver', 'pending')),
   settled       boolean not null default false,
   note          text,
   created_by    uuid references profiles(id),
@@ -246,10 +249,23 @@ alter table trips add column if not exists customer_phone text;
 alter table trips add column if not exists commission_percent numeric(5,2) not null default 0;
 alter table trips add column if not exists payment_status text not null default 'due' check (payment_status in ('due', 'paid'));
  
+alter table trips add column if not exists commission_paid boolean not null default false;
+alter table trips alter column money_holder set default 'pending';
+alter table trips drop constraint if exists trips_money_holder_check;
+alter table trips add constraint trips_money_holder_check check (money_holder in ('office', 'driver', 'pending'));
+ 
+-- আংশিক পেমেন্ট সাপোর্ট (due/partial/paid)
+alter table trips add column if not exists amount_paid numeric(12,2) not null default 0;
+alter table trips add column if not exists commission_paid_amount numeric(12,2) not null default 0;
+-- পুরনো ট্রিপ যেগুলো আগেই 'paid' হিসেবে মার্ক করা ছিল, তাদের amount_paid = income বসিয়ে দেওয়া (হিসাব ঠিক রাখতে)
+update trips set amount_paid = income where payment_status = 'paid' and amount_paid = 0;
+alter table trips drop constraint if exists trips_payment_status_check;
+alter table trips add constraint trips_payment_status_check check (payment_status in ('due', 'partial', 'paid'));
+alter table trips drop column if exists commission_paid;
+ 
 create index if not exists idx_companies_shop_id on companies(shop_id);
 create index if not exists idx_trips_company_id on trips(company_id);
  
 -- ============================================================
 -- End of schema
 -- ============================================================
- 
