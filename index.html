@@ -130,6 +130,7 @@
     margin-bottom: 18px;
   }
   .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .grid-4 { grid-template-columns: repeat(4, 1fr); }
   .stat-card {
     background: var(--card);
     border-radius: var(--radius);
@@ -261,6 +262,7 @@
     #appShell.ready { padding-top: 56px; }
     .main { padding: 14px; max-height: none; overflow-y: visible; }
     .grid-3 { grid-template-columns: 1fr; }
+    .grid-4 { grid-template-columns: 1fr 1fr; }
     .form-row { grid-template-columns: 1fr; }
     .card { padding: 14px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
     table { min-width: 560px; }
@@ -310,16 +312,18 @@
     <!-- ================= DASHBOARD ================= -->
     <section class="view active" id="view-dashboard">
       <h1>আজকের হিসাব</h1>
-      <div class="grid-3">
-        <div class="stat-card income"><div class="label">আজকের আয়</div><div class="value" id="dashIncome">৳০</div></div>
+      <div class="grid-3 grid-4" id="dashGrid">
+        <div class="stat-card income"><div class="label">আজকের প্রাপ্ত আয়</div><div class="value" id="dashIncome">৳০</div></div>
+        <div class="stat-card due"><div class="label">আজকের বাকি</div><div class="value" id="dashDue" style="color:var(--danger)">৳০</div></div>
         <div class="stat-card cost"><div class="label">আজকের খরচ</div><div class="value" id="dashCost">৳০</div></div>
         <div class="stat-card profit"><div class="label">আজকের লাভ</div><div class="value" id="dashProfit">৳০</div></div>
       </div>
+      <p style="color:var(--muted);font-size:13px;margin-top:-10px">লাভ শুধু হাতে-আসা টাকা দিয়ে হিসাব হচ্ছে — বাকি টাকা "টাকা পেলাম" চাপার পরই আয়/লাভে যোগ হবে।</p>
  
       <div class="card">
         <h2 style="font-family:'Baloo Da 2',sans-serif;font-size:16px;margin-top:0">গাড়ি পারফরম্যান্স (আজ)</h2>
         <table>
-          <thead><tr><th>গাড়ি</th><th>ট্রিপ</th><th>আয়</th><th>খরচ</th><th>লাভ</th></tr></thead>
+          <thead><tr><th>গাড়ি</th><th>ট্রিপ</th><th>প্রাপ্ত আয়</th><th>খরচ</th><th>লাভ</th></tr></thead>
           <tbody id="dashVehiclePerf"><tr><td colspan="5" class="empty">লোড হচ্ছে...</td></tr></tbody>
         </table>
       </div>
@@ -458,11 +462,13 @@
           <button id="nextDay">▶</button>
         </div>
       </div>
-      <div class="grid-3" style="margin-bottom:16px">
-        <div class="stat-card income"><div class="label">মোট আয়</div><div class="value" id="dailyIncome">৳০</div></div>
+      <div class="grid-3 grid-4" style="margin-bottom:16px">
+        <div class="stat-card income"><div class="label">প্রাপ্ত আয়</div><div class="value" id="dailyIncome">৳০</div></div>
+        <div class="stat-card due"><div class="label">বাকি</div><div class="value" id="dailyDue" style="color:var(--danger)">৳০</div></div>
         <div class="stat-card cost"><div class="label">মোট খরচ</div><div class="value" id="dailyCost">৳০</div></div>
         <div class="stat-card profit"><div class="label">মোট লাভ</div><div class="value" id="dailyProfit">৳০</div></div>
       </div>
+      <p style="color:var(--muted);font-size:13px;margin-top:-10px">"আয়" কলামে ট্রিপের পুরো ভাড়া দেখাচ্ছে, কিন্তু উপরের "প্রাপ্ত আয়" আর "লাভ" শুধু যে টাকা আসলেই হাতে এসেছে সেটাই গোনে — বাকি টাকা "পেলাম" চাপার পরই যোগ হবে।</p>
       <div class="card">
         <table>
           <thead><tr><th>গাড়ি</th><th>গ্রাহক</th><th>রুট</th><th>আয়</th><th>পেমেন্ট</th><th>খরচ</th><th>কমিশন</th><th>টাকা</th><th>সেটেল</th><th></th></tr></thead>
@@ -484,6 +490,25 @@
           <tbody id="vehiclesBody"><tr><td colspan="6" class="empty">লোড হচ্ছে...</td></tr></tbody>
         </table>
       </div>
+ 
+      <div class="card" id="vehicleDetailCard" style="display:none">
+        <div class="toolbar" style="margin-bottom:10px">
+          <h2 style="font-family:'Baloo Da 2',sans-serif;font-size:16px;margin:0" id="vehicleDetailTitle">—</h2>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input type="month" id="vehicleDetailMonth">
+            <button class="btn small secondary" onclick="closeVehicleDetail()">বন্ধ করো</button>
+          </div>
+        </div>
+        <div class="grid-3" style="margin-bottom:14px">
+          <div class="stat-card income"><div class="label">এই মাসে প্রাপ্ত আয়</div><div class="value" id="vehicleDetailIncome">৳০</div></div>
+          <div class="stat-card cost"><div class="label">এই মাসে খরচ</div><div class="value" id="vehicleDetailCost">৳০</div></div>
+          <div class="stat-card profit"><div class="label">এই মাসে লাভ</div><div class="value" id="vehicleDetailProfit">৳০</div></div>
+        </div>
+        <table>
+          <thead><tr><th>তারিখ</th><th>রুট</th><th>আয়</th><th>পেমেন্ট</th><th>খরচ</th><th>কমিশন</th></tr></thead>
+          <tbody id="vehicleDetailTripsBody"></tbody>
+        </table>
+      </div>
     </section>
  
     <!-- ================= DRIVERS ================= -->
@@ -492,8 +517,19 @@
       <p style="color:var(--muted);margin-top:-12px">কাস্টডি = ড্রাইভার অফিসের কাছে যা ফেরত দেবে। কমিশন = অফিস ড্রাইভারকে যা দেবে। দুটো আলাদা হিসাব।</p>
       <div class="card">
         <table>
-          <thead><tr><th>ড্রাইভার</th><th>গাড়ি</th><th>মোট ট্রিপ</th><th>বকেয়া কাস্টডি (ড্রাইভার দেবে)</th><th>মোট কমিশন</th><th>দেওয়া হয়েছে</th><th>বকেয়া কমিশন (অফিস দেবে)</th></tr></thead>
-          <tbody id="driversBody"><tr><td colspan="7" class="empty">লোড হচ্ছে...</td></tr></tbody>
+          <thead><tr><th>ড্রাইভার</th><th>গাড়ি</th><th>মোট ট্রিপ</th><th>বকেয়া কাস্টডি (ড্রাইভার দেবে)</th><th>মোট কমিশন</th><th>দেওয়া হয়েছে</th><th>বকেয়া কমিশন (অফিস দেবে)</th><th></th></tr></thead>
+          <tbody id="driversBody"><tr><td colspan="8" class="empty">লোড হচ্ছে...</td></tr></tbody>
+        </table>
+      </div>
+ 
+      <div class="card" id="driverDetailCard" style="display:none">
+        <div class="toolbar" style="margin-bottom:10px">
+          <h2 style="font-family:'Baloo Da 2',sans-serif;font-size:16px;margin:0" id="driverDetailTitle">—</h2>
+          <button class="btn small secondary" onclick="closeDriverDetail()">বন্ধ করো</button>
+        </div>
+        <table>
+          <thead><tr><th>তারিখ</th><th>রুট</th><th>আয়</th><th>কমিশন</th><th>কমিশন দেওয়া</th><th>কাস্টডি</th></tr></thead>
+          <tbody id="driverDetailTripsBody"></tbody>
         </table>
       </div>
     </section>
@@ -974,19 +1010,21 @@ async function renderDashboard() {
   const { data: trips, error } = await supabaseClient.from('trips').select('*').eq('trip_date', today);
   if (error) { showToast('ড্যাশবোর্ড ডেটা লোড করতে সমস্যা হয়েছে', true); return; }
  
-  let income = 0, cost = 0;
+  let income = 0, due = 0, cost = 0;
   const perVehicle = {};
   trips.forEach((t) => {
     const tCost = Number(t.fuel_cost) + Number(t.khoraki_cost) + Number(t.other_cost) + Number(t.commission_cost);
-    income += Number(t.income);
+    income += Number(t.amount_paid);
+    due += Number(t.income) - Number(t.amount_paid);
     cost += tCost;
     if (!perVehicle[t.vehicle_id]) perVehicle[t.vehicle_id] = { trips: 0, income: 0, cost: 0 };
     perVehicle[t.vehicle_id].trips += 1;
-    perVehicle[t.vehicle_id].income += Number(t.income);
+    perVehicle[t.vehicle_id].income += Number(t.amount_paid);
     perVehicle[t.vehicle_id].cost += tCost;
   });
  
   document.getElementById('dashIncome').textContent = money(income);
+  document.getElementById('dashDue').textContent = money(due);
   document.getElementById('dashCost').textContent = money(cost);
   document.getElementById('dashProfit').textContent = money(income - cost);
  
@@ -1229,11 +1267,11 @@ async function renderDailyAccounts() {
   const { data: trips, error } = await supabaseClient.from('trips').select('*').eq('trip_date', date).order('created_at');
   if (error) { showToast('দৈনিক হিসাব লোড করা যায়নি', true); return; }
  
-  let income = 0, cost = 0;
+  let income = 0, due = 0, cost = 0;
   const body = document.getElementById('dailyTripsBody');
   body.innerHTML = (trips || []).length ? trips.map((t) => {
     const tCost = Number(t.fuel_cost) + Number(t.khoraki_cost) + Number(t.other_cost) + Number(t.commission_cost);
-    income += Number(t.income); cost += tCost;
+    income += Number(t.amount_paid); due += Number(t.income) - Number(t.amount_paid); cost += tCost;
     const v = vehiclesCache.find((x) => x.id === t.vehicle_id);
     return `<tr>
       <td>${v ? vehicleLabel(v) : '—'}</td>
@@ -1253,6 +1291,7 @@ async function renderDailyAccounts() {
   }).join('') : '<tr><td colspan="10" class="empty">এই দিনে কোনো ট্রিপ নেই</td></tr>';
  
   document.getElementById('dailyIncome').textContent = money(income);
+  document.getElementById('dailyDue').textContent = money(due);
   document.getElementById('dailyCost').textContent = money(cost);
   document.getElementById('dailyProfit').textContent = money(income - cost);
 }
@@ -1273,7 +1312,7 @@ async function renderVehiclesList() {
     <tr>
       <td>${v.plate}</td><td>${v.name || '—'}</td><td>${v.driver_name || '—'}</td><td>${v.driver_phone || '—'}</td>
       <td>${v.is_active ? '<span class="badge paid">সক্রিয়</span>' : '<span class="badge due">নিষ্ক্রিয়</span>'}</td>
-      <td><button class="btn small secondary" onclick="editVehicle('${v.id}')">এডিট</button>${currentProfile.role === 'owner' ? ` <button class="btn small danger" onclick="deleteVehicle('${v.id}')">ডিলিট</button>` : ''}</td>
+      <td><button class="btn small secondary" onclick="showVehicleDetail('${v.id}')">বিস্তারিত</button> <button class="btn small secondary" onclick="editVehicle('${v.id}')">এডিট</button>${currentProfile.role === 'owner' ? ` <button class="btn small danger" onclick="deleteVehicle('${v.id}')">ডিলিট</button>` : ''}</td>
     </tr>`).join('') : '<tr><td colspan="6" class="empty">এখনো কোনো গাড়ি যোগ করা হয়নি</td></tr>';
 }
 function editVehicle(id) {
@@ -1298,6 +1337,51 @@ async function deleteVehicle(id) {
   showToast('গাড়ি ডিলিট হয়েছে');
   await loadVehicles();
   await renderVehiclesList();
+}
+ 
+let currentVehicleDetailId = null;
+function currentMonthStr() { return new Date().toISOString().slice(0, 7); }
+async function showVehicleDetail(vehicleId) {
+  currentVehicleDetailId = vehicleId;
+  const monthInput = document.getElementById('vehicleDetailMonth');
+  if (!monthInput.value) monthInput.value = currentMonthStr();
+  monthInput.onchange = () => renderVehicleDetail();
+  document.getElementById('vehicleDetailCard').style.display = 'block';
+  await renderVehicleDetail();
+}
+function closeVehicleDetail() {
+  document.getElementById('vehicleDetailCard').style.display = 'none';
+  currentVehicleDetailId = null;
+}
+async function renderVehicleDetail() {
+  if (!currentVehicleDetailId) return;
+  const v = vehiclesCache.find((x) => x.id === currentVehicleDetailId);
+  if (!v) return;
+  const month = document.getElementById('vehicleDetailMonth').value || currentMonthStr();
+  const monthStart = month + '-01';
+  const monthEnd = new Date(Number(month.slice(0, 4)), Number(month.slice(5, 7)), 0).toISOString().slice(0, 10);
+ 
+  document.getElementById('vehicleDetailTitle').textContent = vehicleLabel(v) + (v.driver_name ? ' — ' + v.driver_name : '');
+ 
+  const { data: trips, error } = await supabaseClient.from('trips').select('*')
+    .eq('vehicle_id', currentVehicleDetailId).gte('trip_date', monthStart).lte('trip_date', monthEnd).order('trip_date');
+  if (error) { showToast('গাড়ির হিস্ট্রি লোড করা যায়নি', true); return; }
+ 
+  let income = 0, cost = 0;
+  document.getElementById('vehicleDetailTripsBody').innerHTML = (trips || []).length ? trips.map((t) => {
+    const tCost = Number(t.fuel_cost) + Number(t.khoraki_cost) + Number(t.other_cost) + Number(t.commission_cost);
+    income += Number(t.amount_paid); cost += tCost;
+    return `<tr>
+      <td>${t.trip_date}</td><td>${t.from_location} → ${t.to_location}</td><td>${money(t.income)}</td>
+      <td><span class="badge ${t.payment_status}">${paymentStatusLabel(t.payment_status)}</span></td>
+      <td>${money(Number(t.fuel_cost) + Number(t.khoraki_cost) + Number(t.other_cost))}</td>
+      <td>${money(t.commission_cost)}</td>
+    </tr>`;
+  }).join('') : '<tr><td colspan="6" class="empty">এই মাসে এই গাড়ির কোনো ট্রিপ নেই</td></tr>';
+ 
+  document.getElementById('vehicleDetailIncome').textContent = money(income);
+  document.getElementById('vehicleDetailCost').textContent = money(cost);
+  document.getElementById('vehicleDetailProfit').textContent = money(income - cost);
 }
  
 /* ---------------- DRIVERS ---------------- */
@@ -1327,8 +1411,9 @@ async function renderDrivers() {
       <td>${money(s.commissionTotal)}</td>
       <td>${money(s.commissionPaid)}</td>
       <td>${commissionDue > 0.5 ? `${money(commissionDue)} <button class="btn small secondary" onclick="settleCommission('${v.id}', ${commissionDue})">দিলাম</button>` : '—'}</td>
+      <td><button class="btn small secondary" onclick="showDriverDetail('${v.id}')">বিস্তারিত</button></td>
     </tr>`;
-  }).join('') : '<tr><td colspan="7" class="empty">কোনো গাড়িতে ড্রাইভারের নাম যোগ করা নেই</td></tr>';
+  }).join('') : '<tr><td colspan="8" class="empty">কোনো গাড়িতে ড্রাইভারের নাম যোগ করা নেই</td></tr>';
 }
  
 async function settleCommission(vehicleId, dueAmount) {
@@ -1355,6 +1440,28 @@ async function settleCommission(vehicleId, dueAmount) {
   }
   showToast('কমিশন দেওয়া হিসেবে যোগ হলো');
   await renderDrivers();
+}
+ 
+async function showDriverDetail(vehicleId) {
+  const v = vehiclesCache.find((x) => x.id === vehicleId);
+  if (!v) return;
+  const { data: trips, error } = await supabaseClient.from('trips').select('*').eq('vehicle_id', vehicleId).order('trip_date', { ascending: false });
+  if (error) { showToast('হিস্ট্রি লোড করা যায়নি', true); return; }
+ 
+  document.getElementById('driverDetailTitle').textContent = v.driver_name + ' — ' + vehicleLabel(v);
+  document.getElementById('driverDetailTripsBody').innerHTML = (trips || []).length ? trips.map((t) => {
+    const commissionDue = Number(t.commission_cost) - Number(t.commission_paid_amount);
+    return `<tr>
+      <td>${t.trip_date}</td><td>${t.from_location} → ${t.to_location}</td><td>${money(t.income)}</td>
+      <td>${money(t.commission_cost)}</td>
+      <td>${money(t.commission_paid_amount)}${commissionDue > 0.5 ? ` <span class="badge due">বাকি ${money(commissionDue)}</span>` : ''}</td>
+      <td>${t.money_holder === 'driver' ? (t.settled ? '<span class="badge paid">সেটেল</span>' : '<span class="badge due">বকেয়া</span>') : '—'}</td>
+    </tr>`;
+  }).join('') : '<tr><td colspan="6" class="empty">এই ড্রাইভারের কোনো ট্রিপ নেই</td></tr>';
+  document.getElementById('driverDetailCard').style.display = 'block';
+}
+function closeDriverDetail() {
+  document.getElementById('driverDetailCard').style.display = 'none';
 }
  
 /* ---------------- OTHER BOOKINGS ---------------- */
@@ -1454,4 +1561,3 @@ init();
 </script>
 </body>
 </html>
- 
