@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>হোসনেআরা ট্রান্সপোর্ট এজেন্সী — লগইন</title>
+<title>ট্রান্সপোর্ট ম্যানেজার — লগইন</title>
 <link rel="manifest" href="manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+Da+2:wght@500;600;700&family=Hind+Siliguri:wght@400;500;600&display=swap" rel="stylesheet">
@@ -50,6 +50,12 @@
     color: var(--asphalt);
     text-align: center;
     margin: 0 0 4px;
+  }
+  .brand-icon {
+    font-size: 40px;
+    text-align: center;
+    display: block;
+    margin-bottom: 8px;
   }
   .tagline {
     text-align: center;
@@ -104,18 +110,12 @@
     font-size: 14px;
     display: none;
   }
-  .logo {
-    display: block;
-    max-width: 100%;
-    height: auto;
-    margin: 0 auto 20px;
-    border-radius: 8px;
-  }
 </style>
 </head>
 <body>
   <div class="card">
-    <img src="assets/logo.jpg" alt="হোসনেআরা ট্রান্সপোর্ট এজেন্সী" class="logo">
+    <span class="brand-icon">🚚</span>
+    <p class="brand">ট্রান্সপোর্ট ম্যানেজার</p>
     <p class="tagline">গাড়ি ও ট্রিপের হিসাব, এক জায়গায়</p>
     <form id="loginForm">
       <label for="email">ইমেইল</label>
@@ -162,4 +162,3 @@
   </script>
 </body>
 </html>
- 
